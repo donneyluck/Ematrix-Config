@@ -4,8 +4,8 @@
 #+html: <a href="https://www.gnu.org/software/emacs/emacs.html#Releases"><img src="https://img.shields.io/badge/Emacs-29.4-blueviolet.svg?style=flat-square&logo=GNU%20Emacs&logoColor=white"></a>
 #+html: <a href="https://orgmode.org"><img src="https://img.shields.io/badge/Org-literate%20config-%2377aa99?style=flat-square&logo=org&logoColor=white"></a>
 
-#+BEGIN_QUOTE
-#+CAPTION: CAUTION
+#+BEGIN_NOTES
+#+TITLE: CAUTION
 Please note that MinEmacs is under active rewrite. The new generation of this
 configuration (branch `minemacs-ng`) will not be compatible with this one as
 it includes multiple breaking changes compared to the `main` branch. Including
@@ -24,4 +24,4 @@ able to add new features to this branch.
 **At some point, the new `minemacs-ng` will become the `main` branch, so if
 you want to stick with this old generation of the framework, we highly
 recommend you to switch to the `legacy` branch**.
-#+END_QUOTE
+#+END_NOTES
