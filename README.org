@@ -4,8 +4,24 @@
 #+html: <a href="https://www.gnu.org/software/emacs/emacs.html#Releases"><img src="https://img.shields.io/badge/Emacs-29.4-blueviolet.svg?style=flat-square&logo=GNU%20Emacs&logoColor=white"></a>
 #+html: <a href="https://orgmode.org"><img src="https://img.shields.io/badge/Org-literate%20config-%2377aa99?style=flat-square&logo=org&logoColor=white"></a>
 
-<details>
-  <summary>NOTE</summary>
-  请知晓 现在属于施工初期
-</details>
+#+BEGIN_QUOTE
+#+CAPTION: CAUTION
+Please note that MinEmacs is under active rewrite. The new generation of this
+configuration (branch `minemacs-ng`) will not be compatible with this one as
+it includes multiple breaking changes compared to the `main` branch. Including
+but not limited to, dropping the support of Evil and General **(still, you can
+enable the `obsolete/me-evil` module to have the same experience)**, among
+other things.
 
+Personally, I'm moving to a more mainstream Emacs experience as I started to
+hit the limits of `evil-mode`. I think that using Emacs exclusively via Evil
+hides a lot of Emacs' beauty and creates more problems than it solves
+[personal opinion/experience].
+
+I will cherry pick some relevant commits from `minemacs-ng`, but I won't be
+able to add new features to this branch.
+
+**At some point, the new `minemacs-ng` will become the `main` branch, so if
+you want to stick with this old generation of the framework, we highly
+recommend you to switch to the `legacy` branch**.
+#+END_QUOTE
