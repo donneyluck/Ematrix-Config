@@ -1,0 +1,68 @@
+#+title: Ematrix (personal emacs configuration)
+#+author: donney
+#+property: header-args:emacs-lisp :tangle yes :comments link
+#+property: header-args:elisp :exports code
+#+property: header-args:shell :tangle "setup.sh"
+#+startup: overview
+
+#+name: logo
+#+begin_src emacs-lisp :tangle no
+;;;
+;;; ___________               __         .__
+;;; \_   _____/ _____ _____ _/  |________|__|__  ___
+;;;  |    __)_ /     \\__  \\   __\_  __ \  \  \/  /
+;;;  |        \  Y Y  \/ __ \|  |  |  | \/  |>    <
+;;; /_______  /__|_|  (____  /__|  |__|  |__/__/\_ \
+;;;         \/      \/     \/                     \/
+;;;
+;;;  EMATRIX & LIGHTWEIGHT EMACS CONFIGURATION FRAMEWORK
+;;;                        donneyluck.github.io/ematrix
+;;;
+;;; Author: donneyluck@gmail.com
+;;; Copyright (C) 2022-2024  Machine Studio
+;;;
+#+end_src
+
+* 入口文件
+#+name: init.el
+#+attr_html: :collapsed t
+#+begin_src emacs-lisp :tangle "init.el" :noweb no-export
+;; init.el --- Ematrix core initialization file -*- lexical-binding: t; -*-
+<<logo>>
+;;; Commentary:
+
+;; # Ematrix - a minimalist & lightweight Emacs configuration framework
+;;
+;; Load and hooks order:
+;; - `~/.emacs.d/early-init.el`
+;; - `$EMATRIXDIR/early-config.el` (unless disabled in `$EMATRIX_IGNORE_USER_CONFIG`)
+;; - `$EMATRIXDIR/local/early-config.el` (unless disabled)
+;; - `~/.emacs.d/init.el`
+;;   * `before-init-hook'
+;;   * `~/.emacs.d/core/me-vars.el`
+;;   * `~/.emacs.d/core/backports/*.el` (when Emacs < 29)
+;;   * `~/.emacs.d/core/me-loaddefs.el`
+;;   * `$EMATRIXDIR/init-tweaks.el` (unless disabled)
+;;   * `$EMATRIXDIR/local/init-tweaks.el` (unless disabled)
+;;   * `$EMATRIXDIR/modules.el` (unless disabled)
+;;   * `$EMATRIXDIR/local/modules.el` (unless disabled)
+;;   * `~/.emacs.d/core/<module>.el`
+;;   * `~/.emacs.d/modules/<module>.el` (for module in `ematrix-modules')
+;;   * `ematrix-after-loading-modules-hook'
+;;   * `$EMATRIXDIR/custom-vars.el`
+;;   * `$EMATRIXDIR/config.el` (unless disabled)
+;;   * `$EMATRIXDIR/local/config.el` (unless disabled)
+;;   * `after-init-hook'
+;;   * `emacs-startup-hook'
+;;   * `ematrix-after-startup-hook'
+;;     + `ematrix-lazy-hook' (delayed)
+
+;; Special hooks defined with `+make-first-file-hook!'
+;; - `ematrix-first-file-hook'
+;; - `ematrix-first-elisp-file-hook'
+;; - `ematrix-first-python-file-hook'
+;; - `ematrix-first-org-file-hook'
+;; - `ematrix-first-c/c++-file-hook'
+
+;;; Code:
+#+end_src
