@@ -1,0 +1,9 @@
+#+title: Ematirx (emacs personal configuration)
+#+author: donneyluck
+
+#+html: <a href="https://www.gnu.org/software/emacs/emacs.html#Releases"><img src="https://img.shields.io/badge/Emacs-29.4-blueviolet.svg?style=flat-square&logo=GNU%20Emacs&logoColor=white"></a>
+#+html: <a href="https://orgmode.org"><img src="https://img.shields.io/badge/Org-literate%20config-%2377aa99?style=flat-square&logo=org&logoColor=white"></a>
+
+> [!NOTE]
+> 请知晓 现在属于施工初期
+
