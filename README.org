@@ -5,8 +5,10 @@
 #+html: <a href="https://orgmode.org"><img src="https://img.shields.io/badge/Org-literate%20config-%2377aa99?style=flat-square&logo=org&logoColor=white"></a>
 
 #+begin_quote
-[!CAUTION]
+[!NOTE]
 注意：此项目正在施工
+改项目运用文学编程 从 ~config.org~ 中生成配置文件和文档
+如不了解文学编程请参考 ~org-mode~ 的noweb章节
 #+end_quote
 
 * How to use
