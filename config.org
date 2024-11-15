@@ -263,8 +263,7 @@ This would probably involve hooking into the daemon's modeline update function
 to write to a temporary file, and having a file watcher started in other Emacs
 instances, in a similar manner to [[*Rebuild mail index while using mu4e][Rebuild mail index while using mu4e]].
 * Config
-** LOGO
-#+name: logo
+** logo
 #+begin_src emacs-lisp :tangle no
 ;;;
 ;;; ___________               __         .__
@@ -284,7 +283,7 @@ instances, in a similar manner to [[*Rebuild mail index while using mu4e][Rebuil
 
 ** early-init.el
 :properties:
-:header-args: :tangle early-init.el :noweb yes
+:header-args: :tangle early-init.el
 :end:
 *** header
 #+begin_src emacs-lisp
@@ -644,4 +643,15 @@ the packages loaded with `:after ematrix-lazy' can be loaded."
 
 (put 'dired-find-alternate-file 'disabled nil)
 ;;; init.el ends here
+#+end_src
+
+* core
+** me-var.el
+:properties:
+:header-args: :tangle "core/me-var.el" :mkdirp yes :noweb yes
+:end:
+*** header
+#+begin_src emacs-lisp
+;; me-vars.el --- Ematrix -*- lexical-binding: t; -*-
+<<logo>>
 #+end_src
