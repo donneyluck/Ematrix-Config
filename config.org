@@ -264,7 +264,8 @@ to write to a temporary file, and having a file watcher started in other Emacs
 instances, in a similar manner to [[*Rebuild mail index while using mu4e][Rebuild mail index while using mu4e]].
 * Config
 ** logo
-#+begin_src emacs-lisp :tangle no
+#+name: logo
+#+begin_src emacs-lisp
 ;;;
 ;;; ___________               __         .__
 ;;; \_   _____/ _____ _____ _/  |________|__|__  ___
@@ -283,7 +284,7 @@ instances, in a similar manner to [[*Rebuild mail index while using mu4e][Rebuil
 
 ** early-init.el
 :properties:
-:header-args: :tangle early-init.el
+:header-args: :tangle early-init.el :noweb yes
 :end:
 *** header
 #+begin_src emacs-lisp
@@ -648,10 +649,89 @@ the packages loaded with `:after ematrix-lazy' can be loaded."
 * core
 ** me-var.el
 :properties:
-:header-args: :tangle "core/me-var.el" :mkdirp yes :noweb yes
+:header-args: :tangle core/me-var.el :noweb yes :mkdirp yes
 :end:
 *** header
 #+begin_src emacs-lisp
 ;; me-vars.el --- Ematrix -*- lexical-binding: t; -*-
 <<logo>>
+;;; Commentary:
+;;; Code:
+#+end_src
+
+*** groups
+#+begin_src emacs-lisp
+;;; Ematrix groups
+(defgroup ematrix nil "Ematrix specific functionalities." :group 'emacs)
+(defgroup ematrix-apps nil "Ematrix applications." :group 'ematrix)
+(defgroup ematrix-binary nil "Ematrix binary files." :group 'ematrix)
+(defgroup ematrix-buffer nil "Ematrix buffer stuff." :group 'ematrix)
+(defgroup ematrix-completion nil "Completion related stuff." :group 'ematrix)
+(defgroup ematrix-core nil "Ematrix core tweaks." :group 'ematrix)
+(defgroup ematrix-edit nil "Ematrix editor tweaks." :group 'ematrix)
+(defgroup ematrix-keybinding nil "Ematrix keybinding." :group 'ematrix)
+(defgroup ematrix-org nil "Ematrix org-mode tweaks." :group 'ematrix)
+(defgroup ematrix-prog nil "Ematrix programming stuff." :group 'ematrix)
+(defgroup ematrix-project nil "Ematrix project stuff." :group 'ematrix)
+(defgroup ematrix-ui nil "Ematrix UI tweaks." :group 'ematrix)
+(defgroup ematrix-utils nil "Ematrix utility functions." :group 'ematrix)
+(defgroup ematrix-blog nil "Ematrix blog stuff" :group 'ematrix)
+#+end_src
+
+*** directories
+#+begin_src emacs-lisp
+;;; Ematrix directories
+(defconst ematrix-ignore-user-config
+  (let* ((ignores (getenv "EMATRIX_IGNORE_USER_CONFIG"))
+         (ignores (and ignores (downcase ignores))))
+    (when ignores
+      (if (string= ignores "all")
+          '(early-config init-tweaks modules config local/early-config local/init-tweaks local/modules local/config)
+        (mapcar #'intern (split-string ignores)))))
+  "Ignore loading these user configuration files.
+Accepted values are: early-config, init-tweaks, modules, config,
+local/early-config, local/init-tweaks, local/modules and local/config.
+This list is automatically constructed from the space-separated values in the
+environment variable \"$EMATRIX_IGNORE_USER_CONFIG\".")
+
+(defconst ematrix-debug-p
+  (and (or (getenv "EMATRIX_DEBUG") init-file-debug) t)
+  "Ematrix is started in debug mode.")
+
+(defconst ematrix-verbose-p
+  (and (or (getenv "EMATRIX_VERBOSE") ematrix-debug-p) t)
+  "Ematrix is started in verbose mode.")
+
+(defconst ematrix-always-demand-p
+  (and (getenv "EMATRIX_ALWAYS_DEMAND") t)
+  "Load all packages immediately, do not defer any package.")
+
+(defconst ematrix-not-lazy-p
+  (or ematrix-always-demand-p (daemonp) (and (getenv "EMATRIX_NOT_LAZY") t))
+  "Load lazy packages (ematrix-lazy-hook) immediately.")
+
+(defconst ematrix-load-all-modules-p
+  (and (getenv "EMATRIX_LOAD_ALL_MODULES") t)
+  "Force loading all Ematrix modules.")
+
+(defconst ematrix-no-proxies-p
+  (and (getenv "EMATRIX_NO_PROXIES") t)
+  "Disable proxies in `ematrix-proxies'.")
+
+(defcustom ematrix-msg-level
+  (let ((level (string-to-number (or (getenv "EMATRIX_MSG_LEVEL") ""))))
+    (cond (ematrix-verbose-p 4)
+          ((> level 0) level)
+          (t 1)))
+  "Level of printed messages.
+1 - `+error!'
+2 - `+info!'
+3 - `+log!'
+4 - `+debug!'"
+  :group 'ematrix-core
+  :type '(choice
+          (const :tag "Error" 1)
+          (const :tag "Info" 2)
+          (const :tag "Log" 3)
+          (const :tag "Debug" 4)))
 #+end_src
