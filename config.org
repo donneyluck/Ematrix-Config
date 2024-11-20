@@ -647,6 +647,578 @@ the packages loaded with `:after ematrix-lazy' can be loaded."
 #+end_src
 
 ** core
+*** me-bootstrap.el
+:properties:
+:header-args: :tangle core/me-bootstrap.el :noweb yes :mkdirp yes
+:end:
+#+begin_src emacs-lisp
+;;  me-bootstrap.el --- Bootstrap packages (straight & use-package) -*- lexical-binding: t; -*-
+<<logo>>
+;;; Commentary:
+;;; Code:
+(setq
+ ;; Base directory
+ straight-base-dir ematrix-local-dir
+ ;; Add Emacs version and the Git hash to the build directory to avoid problems
+ straight-build-dir (format "build-%s%s" emacs-version (if emacs-repository-version (format "-%s" (substring emacs-repository-version 0 8)) ""))
+ ;; Use the "develop" branch on straight.el's repo.
+ straight-repository-branch "develop"
+ ;; Do not slow startup by checking for package modifs, check only on demand
+ straight-check-for-modifications '(check-on-save find-when-checking))
+
+;; Bootstrapping straight.el
+;; See: github.com/radian-software/straight.el#bootstrapping-straightel
+(defvar bootstrap-version)
+(let ((bootstrap-file (concat straight-base-dir "straight/repos/straight.el/bootstrap.el"))
+      (install-url "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el")
+      (bootstrap-version 7))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer (url-retrieve-synchronously install-url 'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+
+;; Configure `use-package'
+(unless (require 'use-package nil t)
+  (straight-use-package 'use-package))
+
+(setq
+ ;; Set `use-package' to verbose when Ematrix is started in verbose mode
+ use-package-verbose (cond (ematrix-debug-p 'debug) (ematrix-verbose-p t))
+ ;; Defer loading packages by default, use `:demand' to force loading a package
+ use-package-always-defer (not ematrix-always-demand-p)
+ use-package-always-demand ematrix-always-demand-p
+ ;; Make the expanded code as minimal as possible, do not try to catch errors
+ use-package-expand-minimally (not ematrix-debug-p))
+
+;; Add the `:pin-ref' extension to integrate `straight' with `use-package'. And
+;; add support for `ematrix-disabled-packages'.
+(require 'me-use-package-extra)
+
+;; Extra utilities
+;; Be cautious about the installed revision of `once' and `satch' as they aren't stable yet
+(use-package once
+  :straight (:host github :repo "emacs-magus/once")
+  :pin-ref "a6f950c29c846a50018bc63695f24f611c1a58be")
+
+(use-package satch
+  :straight (:host github :repo "emacs-magus/satch.el")
+  :pin-ref "77993b711cccf16702fdc8d21d8f8ba10d7bd0fb")
+
+(provide 'me-bootstrap)
+;;; me-bootstrap.el ends here
+#+end_src
+*** me-builtin.el
+:properties:
+:header-args: :tangle core/me-builtin.el :noweb yes :mkdirp yes
+:end:
+**** header
+#+begin_src emacs-lisp
+;;; me-builtin.el --- Emacs built-in packages -*- lexical-binding: t; -*-
+<<logo>>
+#+end_src
+
+**** package ~emacs~
+#+begin_src emacs-lisp
+(use-package emacs
+  :hook (after-save . +save--guess-file-mode-h)
+  :hook (minibuffer-setup . cursor-intangible-mode) ; See the `minibuffer-prompt-properties' below
+  :custom
+  ;; ====== Default directories for builtin packages ======
+  (auto-save-list-file-prefix (+directory-ensure ematrix-local-dir "auto-save/"))
+  (backup-directory-alist (list (cons "." (+directory-ensure ematrix-local-dir "backup/"))))
+  (custom-theme-directory (concat ematrix-config-dir "themes/"))
+  (diary-file (concat ematrix-local-dir "diary"))
+  (eww-bookmarks-directory (+directory-ensure ematrix-local-dir "eww/bookmarks/"))
+  (remember-data-directory (+directory-ensure ematrix-local-dir "remember/"))
+
+  ;; ====== Better defaults ======
+  (auto-save-default t) ; Enable auto-save (use `recover-file' or `recover-session' to recover)
+  (auto-save-file-name-transforms ; Set file naming transform for `auto-save'
+   `(;; Prefix tramp autosaves with "tramp-"
+     ("\\`/[^/]*:\\([^/]*/\\)*\\([^/]*\\)\\'" ,(concat auto-save-list-file-prefix "tramp-\\2") sha1)
+     ;; Local autosaves
+     (".*" ,auto-save-list-file-prefix sha1)))
+  (auto-window-vscroll nil) ; Do not adjust window-vscroll to view tall lines. Fixes some lag issues: emacs.stackexchange.com/a/28746
+  (scroll-preserve-screen-position t) ; Keep the point in the same position while scrolling
+  (scroll-conservatively 101) ; Do not move cursor to the center when scrolling
+  (scroll-margin 2) ; Scroll at a margin of one line
+  (create-lockfiles nil) ; Disable lockfiles
+  (make-backup-files t) ; Enable making backup files
+  (version-control t) ; Number each backup file
+  (backup-by-copying t) ; Copy instead of renaming current file
+  (delete-old-versions t) ; Clean up after itself
+  (tab-always-indent 'complete) ; Make TAB indents first, then inserts the TAB character
+  (tab-first-completion 'word) ; TAB completion behavior
+  (require-final-newline t) ; End files with newline
+  (undo-limit 20000000) ; 20MB, undo data (per-buffer?) to keep (def. 160kB)
+  (undo-strong-limit 5000000) ; 5MB, discard undo data greater than this generated by a single a command, except the last one (def. 240kB)
+  (undo-outer-limit 30000000) ; 30MB, like the strong limit, but including the last command, prints a warning when it happens (def. 24MB)
+  (use-system-tooltips nil) ; Use small frames to display tooltips instead of the default OS tooltips
+  (window-combination-resize t) ; Resize window combinations proportionally
+  (x-stretch-cursor t) ; Stretch cursor to the glyph width
+  (frame-resize-pixelwise t) ; Do force frame size to be a multiple of char size
+  (read-process-output-max ; Increase single chunk bytes to read from subprocess (def. 4096)
+   (if os/linux (condition-case nil ; Android may raise permission-denied error
+                    (with-temp-buffer ; On GNU/Linux systems, the value should not exceed `pipe-max-size'
+                      (insert-file-contents "/proc/sys/fs/pipe-max-size")
+                      (string-to-number (buffer-string)))
+                  (error read-process-output-max)) ; Fallback to the default value in case of an error
+     (* 1024 1024)))
+  (completion-ignore-case t) ; Ignore case when completing
+  (read-buffer-completion-ignore-case t)
+  (read-file-name-completion-ignore-case t) ; Ignores case when completing files names
+  (read-extended-command-predicate #'command-completion-default-include-p) ; In `M-x', hide commands not relevant for the current mode
+  (completions-detailed t) ; More info on completions
+  (enable-recursive-minibuffers t) ; Enable recursive calls to minibuffer
+  (minibuffer-prompt-properties ; Do not allow the cursor in the minibuffer prompt (works with `cursor-intangible-mode')
+   '(read-only t cursor-intangible t face minibuffer-prompt))
+  (sentence-end-double-space nil) ; Use single space between sentences
+  (delete-by-moving-to-trash t) ; Move stuff to trash
+  (save-some-buffers-default-predicate #'save-some-buffers-root) ; Save files only in sub-directories of current project
+  (inhibit-startup-screen t) ; Inhibit startup message
+  (initial-scratch-message nil) ; No initial scratch message
+  (initial-major-mode 'fundamental-mode) ; Set initial buffer to fundamental-mode for faster load
+  (large-file-warning-threshold (* 20 1024 1024)) ; Increase the large file threshold to 20MiB (10MB)
+  (use-dialog-box nil) ; Always prompt in minibuffer (no GUI)
+  (use-short-answers t) ; Use y or n instead of yes or no
+  (confirm-kill-emacs #'y-or-n-p) ; Confirm before quitting
+  (prettify-symbols-unprettify-at-point t) ; Show unprettified symbol under cursor (when in `prettify-symbols-mode')
+  (display-fill-column-indicator-character ?\u250a) ; Use a dashed line for `display-fill-column-indicator-mode'
+  (apropos-do-all t) ; Make apropos commands search more extensively
+  (vc-follow-symlinks t) ; Do not ask obvious questions, follow symlinks
+  (shell-kill-buffer-on-exit t) ; Kill the shell buffer after exit
+  (widget-image-enable nil) ; No ugly button for widgets
+  (tooltip-hide-delay 20) ; Make tooltips last a bit longer (default 10s)
+  (image-animate-loop t) ; Animated images loop forever instead of playing the animation only once
+  :init
+  (setq-default truncate-lines nil ; Don't truncate long line, display them
+                fill-column 80 ; Default fill column width
+                tab-width 4 ; Default (8) is too big!
+                cursor-type 'bar) ; Use a bar by default, this can be changed by other modes (`evil', `god-mode', etc.)
+
+  ;; Inhibit startup message in echo area the brutal way!
+  ;; The `inhibit-startup-echo-area-message' variable is very restrictive, there is only one unique way of setting it right!
+  ;; See: reddit.com/r/emacs/comments/6e9o4o/comment/di8q1t5
+  (fset 'display-startup-echo-area-message #'ignore)
+  (fset 'display-startup-screen #'ignore)
+
+  ;;; Why use anything but UTF-8?
+  (prefer-coding-system 'utf-8)
+  (set-charset-priority 'unicode)
+  (set-default-coding-systems 'utf-8)
+  ;; I mainly write in English and French. "Latin-1" is suitable for major Western Europe languages
+  (set-language-environment "Latin-1")
+  (set-locale-environment "en_US.UTF-8")
+  ;; Use UTF-16-LE in Windows, see: rufflewind.com/2014-07-20/pasting-unicode-in-emacs-on-windows
+  (set-selection-coding-system (if os/win 'utf-16-le 'utf-8))
+  :config
+  ;; Make `ESC' behave like `C-g'
+  (keymap-global-set "<escape>" #'keyboard-escape-quit)
+
+  ;; Unbind some annoying commands
+  (keymap-global-unset "C-z" 'remove)
+  (keymap-global-unset "C-x C-z" 'remove)
+
+  ;; Remap some keys/page
+  (keymap-global-set "C-c f" #'recentf) ; Instead of `find-file-read-only'
+  (keymap-global-set "C-c D" #'+delete-this-file-and-buffer)
+  (keymap-global-set "C-x k" #'kill-current-buffer) ; Instead of `kill-buffer'
+  (keymap-global-set "<f1>" #'shell) ; Instead of `help-map' (accessible via `C-h')
+  (keymap-global-set "C-w" #'+kill-region-or-backward-word) ; Instead of `kill-region'
+  (keymap-global-set "<remap> <kill-region>" #'+kill-region-or-backward-word) ; C-w
+  (keymap-global-set "<remap> <kill-word>" #'+kill-whitespace-or-word) ; M-d
+  (keymap-global-set "<remap> <backward-kill-word>" #'+backward-kill-whitespace-or-word) ; M-delete or C-backspace
+
+  ;; Enable some useful Emacs commands by default
+  (put 'narrow-to-region 'disabled nil)
+  (put 'narrow-to-page 'disabled nil)
+
+  (defvar-keymap ematrix-open-thing-map
+    :doc "Open/toggle thing, under `C-c o'."
+    :name "Open/toggle thing")
+
+  (keymap-global-set "C-c o" ematrix-open-thing-map)
+
+  ;; Disable previously enabled custom themes before enabling a new one.
+  (advice-add
+   'load-theme :before
+   (satch-defun +theme--disable-previous-themes:before-a (&rest _)
+     "Disable previously enabled themes before enabling the new one."
+     (mapc #'disable-theme custom-enabled-themes)))
+
+  ;; Show trailing whitespace in `prog-mode' and `conf-mode'
+  (+setq-hook! (prog-mode conf-mode) show-trailing-whitespace t)
+
+  ;; By default, Emacs asks before quitting with "C-x C-c", but when running an
+  ;; Emacs Client session, it won't ask unless a file is not saved. I hit "C-x
+  ;; C-c" a lot by error, so lets make it ask before quitting.
+  (advice-add
+   'save-buffers-kill-terminal :around
+   (satch-defun +emacs--ask-on-emacsclient:around-a (origfn arg)
+     (if (frame-parameter nil 'client)
+         (pcase (read-answer "Quit Emacs? " '(("yes"  ?y "quit Emacs Client")
+                                              ("no"   ?n "don't quit")
+                                              ("quit" ?q "kill Emacs")))
+           ("yes" (apply origfn arg))
+           ("quit" (kill-emacs)))
+       (apply origfn arg))))
+
+  ;; Guess the major mode after saving a file in `fundamental-mode' (adapted from Doom Emacs).
+  (defun +save--guess-file-mode-h ()
+    "Guess major mode when saving a file in `fundamental-mode'.
+Likely, something has changed since the buffer was opened. e.g. A shebang line
+or file path may exist now."
+    (when (eq major-mode 'fundamental-mode)
+      (let ((buffer (or (buffer-base-buffer) (current-buffer))))
+        (and (buffer-file-name buffer)
+             (eq buffer (window-buffer (selected-window))) ;; Only visible buffers
+             (set-auto-mode)))))
+
+  ;; Advice `emacs-session-filename' to ensure creating "session.ID" files in a sub-directory
+  (let ((x-win-dir (+directory-ensure ematrix-local-dir "x-win/")))
+    (advice-add
+     'emacs-session-filename :filter-return
+     (satch-defun +emacs-session-filename--in-subdir:filter-return-a (session-filename)
+       "Put the SESSION-FILENAME in the \"x-win/\" sub-directory."
+       (concat x-win-dir (file-name-nondirectory session-filename))))
+
+    ;; Don't show session files in recentf list and so on
+    (+ignore-root x-win-dir))
+
+  ;; Offer to create parent directories if they do not exist
+  ;; https://github.com/cjohansen/.emacs.d/blob/master/settings/sane-defaults.el
+  (defun +create-non-existent-directory ()
+    (let ((parent-directory (file-name-directory buffer-file-name)))
+      (when (and (not (file-exists-p parent-directory))
+                 (y-or-n-p (format "Directory `%s' does not exist! Create it?" parent-directory)))
+        (make-directory parent-directory t))))
+
+  (add-to-list 'find-file-not-found-functions #'+create-non-existent-directory))
+#+end_src
+
+**** package ~crm~
+#+begin_src emacs-lisp
+(use-package crm
+  :config
+  ;; From: github.com/a-schaefers/spartan-emacs/blob/main/spartan-layers/spartan-vertico.el
+  ;; Add prompt indicator to `completing-read-multiple'. We display [CRM<separator>], e.g., [CRM,] if the separator is a comma.
+  (advice-add
+   #'completing-read-multiple :filter-args
+   (satch-defun +crm--indicator:filter-args-a (args)
+     (cons (format "[CRM%s] %s" (replace-regexp-in-string "\\`\\[.*?]\\*\\|\\[.*?]\\*\\'" "" crm-separator) (car args)) (cdr args)))))
+#+end_src
+
+**** package ~transient~
+#+begin_src emacs-lisp
+(use-package transient
+  :straight (:source gnu-elpa-mirror)
+  :autoload transient-define-prefix transient-define-infix transient-define-suffix
+  :bind (:map
+         transient-map ; Map ESC and q to quit transient
+         ("q" . transient-quit-one)
+         ("<escape>" . transient-quit-one)))
+#+end_src
+
+**** package ~which-key~
+#+begin_src emacs-lisp
+(use-package which-key
+  :straight (:source gnu-elpa-mirror)
+  :hook (ematrix-lazy . which-key-mode)
+  :custom
+  (which-key-idle-delay 1.0)
+  (which-key-idle-secondary-delay nil)
+  (which-key-ellipsis "..")
+  (which-key-prefix-prefix "+")
+  (which-key-sort-order #'which-key-key-order-alpha)
+  (which-key-min-display-lines 3)
+  (which-key-max-display-columns nil)
+  (which-key-allow-multiple-replacements t) ; Allow multiple rules in `which-key-replacement-alist'
+  :config
+  ;; Setup `which-key' integration with the minibuffer
+  (which-key-setup-minibuffer))
+#+end_src
+
+**** package ~tramp~
+#+begin_src emacs-lisp
+(use-package tramp
+  :straight (:source gnu-elpa-mirror)
+  :init
+  ;; This is faster than the default "scp"
+  (unless os/win
+    (setq tramp-default-method "ssh"))
+  :custom
+  (tramp-auto-save-directory (concat ematrix-local-dir "tramp-auto-save/"))
+  (tramp-backup-directory-alist backup-directory-alist)
+  (tramp-default-remote-shell "/bin/bash"))
+#+end_src
+
+**** package ~password-cache~
+#+begin_src emacs-lisp
+(use-package password-cache
+  :custom
+  (password-cache t) ; Enable password caching
+  (password-cache-expiry 60)) ; Cache for one minute (def. 16s)
+#+end_src
+
+**** pacakge ~auth-source~
+#+begin_src emacs-lisp
+(use-package auth-source
+  :custom
+  (auth-sources '("~/.authinfo.gpg")) ; Default auth-sources to GPG
+  (auth-source-do-cache t) ; Enable caching, do not keep asking about GPG key
+  (auth-source-cache-expiry 86400)) ; All day (def. 7200s = 2h)
+#+end_src
+
+**** package ~epa~
+#+begin_src emacs-lisp
+(use-package epa
+  :custom
+  (epg-pinentry-mode 'loopback)) ; Force gpg-agent to use minibuffer to prompt for passphrase (GPG 2.1+).
+#+end_src
+
+**** pacakge ~epa-file~
+#+begin_src emacs-lisp
+(use-package epa-file
+  :after ematrix-first-file
+  :demand
+  :config
+  (+shutup! (epa-file-enable)))
+#+end_src
+
+**** package ~dired~
+#+begin_src emacs-lisp
+(use-package dired
+  ;; Enable adding mail attachments from dired "C-c RET C-a" for
+  ;; `gnus-dired-attach'
+  :hook (dired-mode . turn-on-gnus-dired-mode)
+  :custom
+  (dired-dwim-target t)
+  (dired-auto-revert-buffer t)
+  (dired-recursive-copies 'always)
+  (dired-recursive-deletes 'top)
+  (dired-clean-confirm-killing-deleted-buffers nil)
+  :config
+  ;; Open some files with OS' default application
+  (when-let (cmd (cond ((or os/linux os/bsd) "xdg-open") (os/mac "open") (os/win "start")))
+    (setq dired-guess-shell-alist-user
+          `(("\\.\\(?:docx?\\|pdf\\|djvu\\|eps\\)\\'" ,cmd)
+            ("\\.\\(?:jpe?g\\|png\\|gif\\|xpm\\|webp\\|svg\\)\\'" ,cmd)
+            ("\\.\\(?:xcf\\)\\'" ,cmd)
+            ("\\.\\(csv\\|xlsx?\\)\\'" ,cmd)
+            ("\\.\\(tex\\|bib\\)\\'" ,cmd)
+            ("\\.\\(?:mp4\\|mkv\\|avi\\|flv\\|rm\\|mpg\\|webm\\|rmvb\\|ogv\\)\\(?:\\.part\\)?\\'" ,cmd)
+            ("\\.\\(?:mp3\\|flac\\|wav\\|ogg\\|m4a\\)\\'" ,cmd)
+            ("\\.html?\\'" ,cmd)
+            ("\\.md\\'" ,cmd)))))
+
+(use-package dired-aux
+  :custom
+  (dired-vc-rename-file t)
+  (dired-create-destination-dirs 'ask))
+
+(use-package dired-x
+  :hook (dired-mode . dired-omit-mode)
+  :custom
+  (dired-omit-verbose nil)
+  :config
+  (cl-callf concat dired-omit-files
+    "\\|^\\.\\(?:svn\\|git\\|hg\\|repo\\)\\'"
+    "\\|^\\.DS_Store\\'"
+    "\\|^flycheck_.*"
+    "\\|^\\.ccls-cache\\'"
+    "\\|^\\.tags\\|\\.clink.db\\|GTAGS\\|GPATH\\|GRTAGS\\'"
+    "\\|\\(?:\\.js\\)?\\.meta\\'"
+    "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"))
+#+end_src
+
+**** package ~doc-view~
+#+begin_src emacs-lisp
+(use-package doc-view
+  :custom
+  (doc-view-continuous t)
+  (doc-view-mupdf-use-svg (+emacs-features-p 'rsvg)))
+#+end_src
+
+**** package ~project~
+#+begin_src emacs-lisp
+(use-package project
+  :straight (:source gnu-elpa-mirror)
+  :commands project-remember-projects-under
+  :hook (kill-emacs . +project-forget-zombie-projects)
+  :custom
+  (project-vc-extra-root-markers
+   '(".projectile.el" ".project.el" ".project" ; Emacs
+     ".repo" ; Repo workspaces
+     "autogen.sh" ; Autotools
+     "*.csproj" "*.vbproj" "*.vcxproj" "*.vdproj" ".code-workspace" ; Visual Studio
+     "requirements.txt" ; Python
+     "package.json" ; Node.js
+     "pom.xml" ; Apache Maven (Java/Kotlin)
+     "client" "tools" "configs" ;future
+     "Cargo.toml")) ; Cargo (Rust)
+  :bind (("C-x p a" . +project-add-project))
+  :config
+  (add-to-list 'project-switch-commands '(project-shell "Shell") t))
+#+end_src
+
+**** [X] package ~tab-bar~
+#+begin_src emacs-lisp :tangle no
+(use-package tab-bar
+  :hook (minemacs-lazy . tab-bar-mode)
+  :custom
+  (tab-bar-format '(tab-bar-format-history tab-bar-format-tabs tab-bar-separator))
+  (tab-bar-tab-name-function #'+tab-bar-tab-name-by-project)
+  (tab-bar-tab-name-format-function #'+tab-bar-tab-spaced-name-format)
+  (tab-bar-close-button-show nil)
+  (tab-bar-auto-width-max '(150 20))
+  (tab-bar-tab-hints t)
+  (tab-bar-show nil)
+  :init
+  (defcustom +tab-bar-tab-name-function-ignored-buffers '("\\*Bookmark List\\*")
+    "Regexps matching buffers to be ignored."
+    :type '(repeat regexp))
+  :config
+  (defun +tab-bar-tab-spaced-name-format (tab i)
+    (let ((current-p (eq (car tab) 'current-tab)))
+      (propertize
+       (concat (if tab-bar-tab-hints (format " %c " (+ ?❶ (1- i))) "")
+               (alist-get 'name tab)
+               (or (and tab-bar-close-button-show
+                        (not (eq tab-bar-close-button-show
+                                 (if current-p 'non-selected 'selected)))
+                        tab-bar-close-button)
+                   ""))
+       'face (funcall tab-bar-tab-face-function tab))))
+
+  ;; Inspired by github.com/alphapapa/ap.el
+  (defun +tab-bar-tab-name-by-project ()
+    "Return project name or tab bar name."
+    (cl-labels ((buffer-project (buffer)
+                  (if-let ((file-name (buffer-file-name buffer)))
+                      (project-current nil (file-name-directory file-name))
+                    (project-current nil (buffer-local-value 'default-directory buffer))))
+                (window-prev-buffers-last-project (windows)
+                  (cl-loop for (buffer _ _) in windows
+                           unless (cl-loop for regexp in +tab-bar-tab-name-function-ignored-buffers
+                                           thereis (string-match-p regexp (buffer-name buffer)))
+                           when (buffer-project buffer) return it)))
+      (if-let ((project (or (buffer-project (window-buffer (minibuffer-selected-window)))
+                            (window-prev-buffers-last-project (window-prev-buffers (minibuffer-selected-window))))))
+          (concat (unless tab-bar-tab-hints " ") "π " (project-name project))
+        (tab-bar-tab-name-current-with-count)))))
+#+end_src
+
+**** package ~flymake~
+#+begin_src emacs-lisp
+(use-package flymake
+  :straight (:source gnu-elpa-mirror)
+  :hook ((prog-mode conf-mode) . flymake-mode)
+  :custom
+  (flymake-fringe-indicator-position 'right-fringe)
+  (flymake-error-bitmap '(+flymake-bitmap-left-arrow-hi-res compilation-error))
+  (flymake-warning-bitmap '(+flymake-bitmap-left-arrow-hi-res compilation-warning))
+  (flymake-note-bitmap '(+flymake-bitmap-left-arrow-hi-res compilation-info))
+  :config
+  (transient-define-prefix +flymake-transient ()
+    "Transient for flymake."
+    [[("n" "Next error" flymake-goto-next-error :transient t)
+      ("N" "Prev error" flymake-goto-prev-error :transient t)]
+     [("B" "Buffer diagnostics" flymake-show-buffer-diagnostics :transient t)
+      ("P" "Project diagnostics" flymake-show-project-diagnostics :transient t)
+      ("L" "Log buffer" flymake-switch-to-log-buffer :transient t)]
+     [("S" "Start" flymake-start :transient t)
+      ("Q" "Quit" ignore :transient t)]])
+
+  ;; Use the session's `load-path' with flymake
+  (with-eval-after-load 'elisp-mode
+    (cl-callf append elisp-flymake-byte-compile-load-path load-path))
+
+  ;; Larger right frings
+  (with-eval-after-load 'fringe
+    (set-fringe-style '(8 . 13)))
+
+  ;; Better fringe bitmaps
+  (define-fringe-bitmap '+flymake-bitmap-left-arrow-hi-res
+    [#b00000011110
+     #b00000111100
+     #b00001111000
+     #b00011110000
+     #b00111100000
+     #b01111000000
+     #b01111000000
+     #b00111100000
+     #b00011110000
+     #b00001111000
+     #b00000111100
+     #b00000011110]
+    nil 13))
+#+end_src
+
+**** package ~xt-mouse~
+#+begin_src emacs-lisp
+(use-package xt-mouse
+  :hook (tty-setup . xterm-mouse-mode))
+#+end_src
+
+**** package ~eshell~
+#+begin_src emacs-lisp
+(use-package eshell
+  :custom
+  (eshell-scroll-to-bottom-on-input 'this))
+#+end_src
+
+**** package ~reftex & bibtex~
+#+begin_src emacs-lisp
+(use-package reftex ;; Inspired by Doom Emacs
+  :hook (reftex-toc-mode . reftex-toc-rescan)
+  :custom
+  ;; Get RefTeX working with BibLaTeX. See: tex.stackexchange.com/a/31992/43165
+  (reftex-cite-format
+   '((?a . "\\autocite[]{%l}")
+     (?b . "\\blockcquote[]{%l}{}")
+     (?c . "\\cite[]{%l}")
+     (?f . "\\footcite[]{%l}")
+     (?n . "\\nocite{%l}")
+     (?p . "\\parencite[]{%l}")
+     (?s . "\\smartcite[]{%l}")
+     (?t . "\\textcite[]{%l}"))
+   ;; This is needed when `reftex-cite-format' is set. See:
+   ;; superuser.com/a/1386206
+   (reftex-plug-into-AUCTeX t)
+   (reftex-toc-split-windows-fraction 0.3)))
+
+(use-package bibtex
+  :hook (bibtex-mode . display-line-numbers-mode)
+  :custom
+  (bibtex-dialect 'biblatex)
+  (bibtex-align-at-equal-sign t)
+  (bibtex-text-indentation 20))
+#+end_src
+
+**** package ~treesit~
+#+begin_src emacs-lisp
+(use-package treesit
+  :when (+emacs-features-p 'tree-sitter)
+  :custom
+  (treesit-font-lock-level 4))
+#+end_src
+
+**** package ~dockerfile-ts-mode~
+#+begin_src emacs-lisp
+(use-package dockerfile-ts-mode
+  :when (+emacs-features-p 'tree-sitter)
+  :mode "/Dockerfile\\'")
+#+end_src
+
+**** package ~cmake-ts-mode~
+#+begin_src emacs-lisp
+(use-package cmake-ts-mode
+  :when (+emacs-features-p 'tree-sitter)
+  :mode "CMakeLists\\.txt\\'"
+  :mode "\\.cmake\\'")
+#+end_src
+
 *** me-var.el
 :properties:
 :header-args: :tangle core/me-var.el :noweb yes :mkdirp yes
@@ -929,4 +1501,48 @@ Each string is a regexp, matched against variable names to omit from
 (provide 'me-vars)
 
 ;;; me-vars.el ends here
+#+end_src
+
+*** me-gc.el
+:properties:
+:header-args: :tangle core/me-gc.el :noweb yes :mkdirp yes
+:end:
+#+begin_src emacs-lisp
+;; me-gc.el --- Ematrix -*- lexical-binding: t; -*-
+<<logo>>
+;;; Commentary:
+;;; Code:
+;; The `gc-cons-threshold' has been set in "early-init.el" to a ridiculously
+;; high value (`most-positive-fixnum') to reduce the number of garbage
+;; collections during startup, it will be overwritten by `gcmh-mode' or by the
+;; following hook, so we place it at the end of `ematrix-lazy-hook' to maximize
+;; the benefit.
+
+;; NOTE: I'm experimenting with these settings instead of using `gcmh'.
+;; See: https://zenodo.org/records/10213384
+(when (+package-disabled-p 'gcmh)
+  (add-hook
+   'ematrix-lazy-hook
+   (satch-defun +ematrix--gc-tweaks-h ()
+     (setq gc-cons-threshold (* 128 1024 1024)
+           gc-cons-percentage 0.25))
+   90))
+
+(use-package gcmh
+  :straight t
+  :init
+  (add-hook 'ematrix-lazy-hook #'gcmh-mode 90)
+  :custom
+  ;; Set the delay to 20s instead of the default 15. I tried using `auto', but
+  ;; with the default 20 of `gcmh-auto-idle-delay-factor', it triggers GC each
+  ;; 1s on my machine. Setting the factor to a higher value should solve the
+  ;; issue on my machine, but I don't think it is right to assume it will work
+  ;; the same way on other machines. So we switch back to a fixed delay of 20s.
+  (gcmh-idle-delay 20)
+  ;; The default `gcmh's 1GB is probably too high. We set it to 256MB on 64bit
+  ;; systems, or 16MB on 32bit ones.
+  (gcmh-high-cons-threshold (* 1024 1024 (if (string-suffix-p "64" (symbol-name sys/arch)) 256 16))))
+
+(provide 'me-gc)
+;;; me-gc.el ends here
 #+end_src
