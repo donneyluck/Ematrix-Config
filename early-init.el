@@ -52,4 +52,8 @@
 ;; Load the user early configuration files
 (+load-user-configs 'early-config 'local/early-config)
 
+;; Load main config file "./config.org"
+(require 'org)
+(org-babel-load-file (expand-file-name (concat user-emacs-directory "config.org")))
+
 ;;; early-init.el ends here
