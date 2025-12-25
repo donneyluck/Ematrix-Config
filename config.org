@@ -350,7 +350,7 @@ instances, in a similar manner to [[*Rebuild mail index while using mu4e][Rebuil
 
 ** init.el
 :properties:
-:header-args: :tangle init.el :noweb yes
+:header-args: :tangle init.el :noweb no
 :end:
 *** header
 #+begin_src emacs-lisp
