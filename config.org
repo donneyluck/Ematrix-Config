@@ -1219,9 +1219,9 @@ or file path may exist now."
   :mode "\\.cmake\\'")
 #+end_src
 
-*** me-var.el
+*** me-vars.el
 :properties:
-:header-args: :tangle core/me-var.el :noweb yes :mkdirp yes
+:header-args: :tangle core/me-vars.el :noweb yes :mkdirp yes
 :end:
 **** header
 #+begin_src emacs-lisp
