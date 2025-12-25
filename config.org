@@ -278,13 +278,13 @@ instances, in a similar manner to [[*Rebuild mail index while using mu4e][Rebuil
 ;;; donneyluck.github.io/ematrix
 ;;;
 ;;; Author: donneyluck@gmail.com
-;;; Copyright (C) 2022-2024  Machine Studio
+;;; Copyright (C) 2022-2026  Machine Studio
 ;;;
 #+end_src
 
 ** early-init.el
 :properties:
-:header-args: :tangle early-init.el :noweb yes
+:header-args: :tangle early-init.el :noweb no
 :end:
 *** header
 #+begin_src emacs-lisp
