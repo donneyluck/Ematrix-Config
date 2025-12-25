@@ -1,5 +1,18 @@
 ;;; early-init.el ---  early initialization tweaks -*- lexical-binding: t; -*-
-<<logo>>
+;;;
+;;; ___________               __         .__
+;;; \_   _____/ _____ _____ _/  |________|__|__  ___
+;;;  |    __)_ /     \\__  \\   __\_  __ \  \  \/  /
+;;;  |        \  Y Y  \/ __ \|  |  |  | \/  |>    <
+;;; /_______  /__|_|  (____  /__|  |__|  |__/__/\_ \
+;;;         \/      \/     \/                     \/
+;;;
+;;; MINIMALIST & LIGHTWEIGHT EMACS CONFIGURATION FRAMEWORK
+;;; donneyluck.github.io/ematrix
+;;;
+;;; Author: donneyluck@gmail.com
+;;; Copyright (C) 2022-2026  Machine Studio
+;;;
 ;;; Commentary:
 ;;; Code:
 
@@ -29,6 +42,12 @@
 ;; It seems like, even when `tool-bar-mode' is nil, `tool-bar-setup' still be called
 (advice-add 'tool-bar-setup :override #'ignore)
 
+;; Auto-tangle config.org before loading generated files
+(require 'org)
+(setq org-id-locations '(""))
+(setq org-confirm-babel-evaluate nil)
+(org-babel-tangle-file "config.org")
+
 ;; NOTE: In Emacs29+, frames can have a transparent background via the
 ;; `alpha-background' parameter. For a better experience, this value should be
 ;; set early before any frame gets created (i.e. in "early-init.el"). MinEmacs
@@ -51,9 +70,5 @@
 
 ;; Load the user early configuration files
 (+load-user-configs 'early-config 'local/early-config)
-
-;; Load main config file "./config.org"
-(require 'org)
-(org-babel-load-file (expand-file-name (concat user-emacs-directory "config.org")))
 
 ;;; early-init.el ends here
