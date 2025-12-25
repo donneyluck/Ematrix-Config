@@ -2986,3 +2986,185 @@ scaling factor for the font in Emacs' `face-font-rescale-alist'. See the
 (provide 'me-lib)
 ;;; me-lib.el ends here
 #+end_src
+
+*** ematrix-loaded.el
+:properties:
+:header-args: :tangle core/ematrix-loaded.el :noweb yes :mkdirp yes
+:end:
+**** header
+#+begin_src emacs-lisp
+;; ematrix-loaded.el --- Ematrix -*- lexical-binding: t; -*-
+<<logo>>
+;;; Commentary:
+;;; Code:
+
+;; Run hooks
+(when ematrix-after-startup-hook
+  (setq ematrix-after-startup-hook (reverse ematrix-after-startup-hook))
+  (+log! "Running %d `ematrix-after-startup-hook' hooks."
+        (length ematrix-after-startup-hook))
+  (run-hooks 'ematrix-after-startup-hook))
+
+(+load ematrix-core-dir "ematrix-lazy.el")
+
+(+log! "Providing `ematrix-loaded'.")
+
+(provide 'ematrix-loaded)
+
+ ;;; ematrix-loaded.el ends here
+#+end_src
+
+*** ematrix-lazy.el
+:properties:
+:header-args: :tangle core/ematrix-lazy.el :noweb yes :mkdirp yes
+:end:
+**** header
+#+begin_src emacs-lisp
+;; ematrix-lazy.el --- Ematrix -*- lexical-binding: t; -*-
+<<logo>>
+;;; Commentary:
+;; Feature loaded when Emacs is idle after `ematrix-loaded', it is used to
+;; lazily load other stuff after loading Emacs.
+
+;; The hooks in `ematrix-lazy-hook' are loaded incrementally when Emacs goes
+;; idle, but when `ematrix-not-lazy-p' is set to t, they will be all loaded at
+;; once.
+
+;;; Code:
+
+;; Run hooks
+(when ematrix-lazy-hook
+  (if ematrix-not-lazy-p
+      (progn ; If `ematrix-not-lazy-p' is true, force loading lazy hooks immediately
+        (+log! "Loading %d lazy packages immediately." (length ematrix-lazy-hook))
+        (run-hooks 'ematrix-lazy-hook)
+        (provide 'ematrix-lazy))
+    (+log! "Loading %d lazy packages incrementally." (length ematrix-lazy-hook))
+    (cl-callf append ematrix--lazy-high-priority-forms
+      (mapcar #'ensure-list ematrix-lazy-hook)
+      '((provide 'ematrix-lazy))))) ;; Provide `ematrix-lazy' at the end
+
+(defvar ematrix--lazy-high-priority-timer
+  (run-with-timer
+   0.1 0.001
+   (lambda ()
+     (if ematrix--lazy-high-priority-forms
+         (let ((inhibit-message (not ematrix-verbose-p)))
+           (eval (pop ematrix--lazy-high-priority-forms)))
+       (progn
+         (cancel-timer ematrix--lazy-high-priority-timer))))))
+
+(defvar ematrix--lazy-low-priority-timer
+  (run-with-timer
+   0.3 0.001
+   (lambda ()
+     (if ematrix--lazy-low-priority-forms
+         (let ((inhibit-message (not ematrix-verbose-p)))
+           (eval (pop ematrix--lazy-low-priority-forms)))
+       (progn
+         (cancel-timer ematrix--lazy-low-priority-timer))))))
+
+;;; ematrix-lazy.el ends here
+#+end_src
+
+*** me-modules.el
+:properties:
+:header-args: :tangle core/me-modules.el :noweb yes :mkdirp yes
+:end:
+**** header
+#+begin_src emacs-lisp
+;; me-modules.el --- Ematrix -*- lexical-binding: t; -*-
+<<logo>>
+;;; Commentary:
+;;; Code:
+
+(defcustom ematrix-core-modules '()
+  "Ematrix enabled core modules."
+  :group 'ematrix-core
+  :type '(repeat symbol))
+
+(defcustom ematrix-modules
+  '(;; me-ai
+    ;; me-biblio
+    ;; me-calendar
+    ;; me-checkers
+    ;; me-clojure
+    ;; me-common-lisp
+    ;; me-completion
+    ;; me-daemon
+    ;; me-data
+    ;; me-debug
+    ;; me-docs
+    ;; me-editor
+    ;; me-emacs-lisp
+    ;; me-email
+    ;; me-embedded
+    ;; me-evil
+    ;; me-extra
+    ;; me-files
+    ;; me-fun
+    ;; me-god
+    ;; me-gtd
+    ;; me-keybindings
+    ;; me-latex
+    ;; me-lifestyle
+    ;; me-math
+    ;; me-media
+    ;; me-modeling
+    ;; me-meow
+    ;; me-multi-cursors
+    ;; me-nano
+    ;; me-natural-langs
+    ;; me-notes
+    ;; me-org
+    ;; me-prog
+    ;; me-blog
+    ;; me-project
+    ;; me-dashboard
+    ;; me-robot
+    ;; me-rss
+    ;; me-scheme
+    ;; me-services
+    ;; me-tags
+    ;; me-tools
+    ;; me-tty
+    ;; me-ui
+    ;; me-undo
+    ;; me-vc
+    ;; me-window
+    ;; me-workspaces)
+  "Ematrix enabled modules."
+  :group 'ematrix-core
+  :type '(repeat symbol))
+
+
+(provide 'me-modules)
+
+;;; me-modules.el ends here
+#+end_src
+  
+*** me-compat.el
+:properties:
+:header-args: :tangle core/me-compat.el :noweb yes :mkdirp yes
+:end:
+**** header
+#+begin_src emacs-lisp
+;; me-compat.el --- Emacs forward compatibility layer -*- lexical-binding: t; -*-
+<<logo>>
+;;; Commentary:
+;;; 这个 compat 包是 Emacs 的 向前兼容性库，主要作用是为旧版本的 Emacs 提供新版本才有的函数和宏定义。
+;;; 核心功能
+;;; 提供新功能兼容：让基于旧版 Emacs（最低支持 24.4）开发的包也能使用新版 Emacs 引入的函数和宏
+;;; 按需加载：只有当当前 Emacs 版本确实需要时才会安装这些定义
+;;; 无性能影响：如果在较新的 Emacs 版本上编译，所有兼容定义都会在编译时被禁用，不会带来任何性能损耗 
+;;; Code:
+
+(use-package compat
+  :straight t
+  :demand)
+
+(provide 'me-compat)
+
+;;; me-compat.el ends here
+#+end_src
+  
