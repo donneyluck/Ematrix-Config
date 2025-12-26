@@ -646,7 +646,7 @@ the packages loaded with `:after ematrix-lazy' can be loaded."
 ;;; init.el ends here
 #+end_src
 
-** core
+** core 核心
 *** me-bootstrap.el
 :properties:
 :header-args: :tangle core/me-bootstrap.el :noweb yes :mkdirp yes
@@ -3282,6 +3282,7 @@ scaling factor for the font in Emacs' `face-font-rescale-alist'. See the
 ;;; me-use-package.el ends here
 #+end_src
 
+** modules 模块
 *** me-evil.el
 :properties:
 :header-args: :tangle modules/me-evil.el :noweb yes :mkdirp yes
