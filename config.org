@@ -3128,7 +3128,7 @@ scaling factor for the font in Emacs' `face-font-rescale-alist'. See the
     ;; me-tags
     ;; me-tools
     ;; me-tty
-    ;; me-ui
+    me-ui
     ;; me-undo
     ;; me-vc
     ;; me-window
@@ -4756,4 +4756,124 @@ scaling factor for the font in Emacs' `face-font-rescale-alist'. See the
 (provide 'me-evil)
 ;;; me-evil.el ends here
 
+#+end_src
+
+*** me-ui.el
+:properties:
+:header-args: :tangle modules/me-ui.el :noweb yes :mkdirp yes
+:end:
+**** header
+#+begin_src emacs-lisp
+;; me-evil.el --- Emacs as Vim! -*- lexical-binding: t; -*-
+<<logo>>
+;;; Commentary:
+;;; Code:
+#+end_src
+
+**** nerd-icons 图标包
+#+begin_src emacs-lisp
+(use-package nerd-icons
+  :straight t
+  :hook (ematrix-build-functions . nerd-icons-install-fonts)
+  :config
+  ;; Show .m files as Matlab/Octave files (integral icon)
+  (setcdr (assoc "m" nerd-icons-extension-icon-alist) '(nerd-icons-mdicon "nf-md-math_integral_box" :face nerd-icons-orange)))
+#+end_src
+
+**** doom-theme 主题包
+#+begin_src emacs-lisp
+(use-package doom-themes
+  :straight t
+  :config
+  (with-eval-after-load 'org
+    (doom-themes-org-config))
+  ;; Enable blinking modeline on errors (`visible-bell')
+  (+with-delayed-1! (doom-themes-visual-bell-config)))
+#+end_src
+
+**** doom-modeline 模式栏包
+#+begin_src emacs-lisp
+(use-package doom-modeline
+  :straight t
+  :hook (ematrix-lazy . doom-modeline-mode)
+  :custom
+  (doom-modeline-bar-width 1)
+  (doom-modeline-time-icon nil)
+  (doom-modeline-buffer-encoding 'nondefault)
+  (doom-modeline-unicode-fallback t)
+  (doom-modeline-total-line-number t)
+  (doom-modeline-enable-word-count t)
+  (doom-modeline-continuous-word-count-modes '(markdown-mode markdown-ts-mode gfm-mode org-mode rst-mode latex-mode tex-mode))
+  :custom-face
+  ;; Hide the modeline bar
+  (doom-modeline-bar ((t (:inherit mode-line :background unspecified))))
+  (doom-modeline-bar-inactive ((t (:inherit mode-line :background unspecified)))))
+
+;; NOT USE
+;; (use-package enlight
+;;   :straight (:host github :repo "ichernyshovvv/enlight")
+;;   :when (>= emacs-major-version 29) ; TEMP+BUG: There is an issue with Emacs 28
+;;   :custom
+;;   (enlight-content
+;;    (enlight-menu
+;;     '(("Org Mode"
+;;        ("Org-Agenda (today)" (org-agenda nil "a") "a"))
+;;       ("Projects"
+;;        ("Switch to project" project-switch-project "p")))))
+;;   :init
+;;   (if ematrix-started-with-extra-args-p
+;;       (enlight-open)
+;;     (setq initial-buffer-choice #'enlight)))
+
+;; (use-package lacarte
+;;   :straight t
+;;   :bind ([f10] . lacarte-execute-menu-command))
+#+end_src
+
+**** svg-lib svg图标
+svg-lib是一个Emacs库，它允许创建和显示各种SVG对象，例如标签、图标、按钮、进度条、进度饼图和日期。每个对象都保证能够完美地适应文本缓冲区，其宽度是字符宽度的倍数，高度是字符高度的倍数。
+#+begin_src emacs-lisp
+(use-package svg-lib
+  :straight t
+  :custom
+  (svg-lib-icons-dir (concat ematrix-cache-dir "svg-lib/icons/")))
+#+end_src
+
+**** tmp
+#+begin_src emacs-lisp
+(use-package mixed-pitch
+  :straight t
+  :custom
+  (mixed-pitch-variable-pitch-cursor nil)
+  :config
+  (setq
+   mixed-pitch-fixed-pitch-faces
+   (delete-dups
+    (append
+     mixed-pitch-fixed-pitch-faces
+     '(font-lock-comment-delimiter-face font-lock-comment-face org-block
+       org-block-begin-line org-block-end-line org-cite org-cite-key
+       org-document-info-keyword org-done org-drawer org-footnote org-formula
+       org-inline-src-block org-latex-and-related org-link org-code org-column
+       org-column-title org-date org-macro org-meta-line org-property-value
+       org-quote org-ref-cite-face org-sexp-date org-special-keyword org-src
+       org-table org-tag org-tag-group org-todo org-verbatim org-verse)))))
+
+(use-package page-break-lines
+  :straight t
+  :hook ((prog-mode text-mode special-mode) . page-break-lines-mode))
+
+(use-package focus
+  :straight t)
+
+(use-package olivetti
+  :straight t)
+
+(use-package nerd-icons-ibuffer
+  :straight t
+  :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
+
+(provide 'me-ui)
+
+;;; me-ui.el ends here 
 #+end_src
